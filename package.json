@@ -1,0 +1,11 @@
+{
+  "name": "buscaminas",
+  "version": "1.0.0",
+  "description": "Logica de buscaminas",
+  "scripts": {
+    "test": "test",
+    "start": "tsc && node dist/index"
+  },
+  "author": "Lautaro Silva",
+  "license": "ISC"
+}
