@@ -1,7 +1,6 @@
 import { Game } from "./Game"
 import * as scanf from 'scanf';
 
-let created = false;
 let X = 0;
 let Y = 0;
 let M = 0;
@@ -29,7 +28,6 @@ function loadData() {
 // create game
 async function startGame() {
     game = await new Game(X, Y, M)
-    console.log(game.boardMines)
     let finish = false;
     while (!finish) {
         game.printMap()
@@ -45,7 +43,7 @@ async function startGame() {
         finish = action === 0 ? game.toogleFlag(cell) : game.checkCell(cell);
         action = null;
     }
-
+    if(finish) console.log("felicidades!")
 }
 
 loadData();

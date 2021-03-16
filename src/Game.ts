@@ -1,5 +1,3 @@
-import * as figlet from 'figlet';
-
 export interface Cell {
     x: number;
     y: number;
@@ -13,63 +11,127 @@ export class Game {
     sizeX: number;
     sizeY: number;
     mines: number;
-    board: Array<Array<string>>;
+    board: Array<Array<string>> = [];
 
     constructor(posX, posY, mines) {
         this.sizeX = posX;
         this.sizeY = posY;
         this.mines = mines;
+        this.allocateMines();
         this.generateBoard()
     }
 
-    private generateBoard(): void {
-        this.allocateMines();
-        this.board = Array(this.sizeX)
-            .fill([])
-            .map(()=>Array(this.sizeY)
-                .fill(this.setIcon(this.sizeX, this.sizeY, false)))
-    }
-
-    private allocateMines() {
-        for (let cantMines = 1; cantMines <= this.mines; cantMines++) {
-            const posX = Math.floor((Math.random() * this.sizeY) + 1);
-            const posY = Math.floor((Math.random() * this.sizeX) + 1);
-            this.findMine({ x: posX, y: posY }) ? cantMines-- : this.boardMines.push({ x: posX, y: posY });
-        }
-    }
-
     toogleFlag(cell: Cell) {
-        if (!this.isCellValid(cell)) return false;
+        if (!this.isCellValid(cell)) {
+            console.log('Coordenada invalida.')
+            return false
+        };
         if (this.findFlag(cell)) {
             this.boardFlags = this.boardFlags.filter((elem) => elem.x === cell.x && elem.y === cell.y);
             this.boardChecked = this.boardChecked.filter((elem) => elem.x === cell.x && elem.y === cell.y);
+            this.board[cell.x][cell.y] = '#';
         } else {
             this.boardFlags.push(cell)
             this.boardChecked.push(cell)
+            this.board[cell.x][cell.y] = 'F';
         }
-
     }
 
     checkCell(cell: Cell) {
         if (!this.isCellValid(cell)) {
-            return false;
-        }
-        if (this.findChecked(cell)) {
-            console.log('Esta casilla ya se marco')
-        } else {
+            console.log('Coordenada invalida.')
+            return false
+        };
+        if (this.boardChecked.length === 0) {
             if (this.findMine(cell)) {
-                console.log('Bomba! buen intento.')
-                return true;
+                this.moveMine(cell);
+            }
+            this.markCell(cell);
+            console.log('Bien ahi, safaste.')
+        } else {
+            if (this.findChecked(cell)) {
+                console.log('Esta casilla ya se marco')
             } else {
-                this.boardChecked.push({ x: cell.x, y: cell.y })
-                console.log('Bien ahi, safaste.')
+                if (this.findMine(cell)) {
+                    console.log('Bomba! buen intento.')
+                    return true;
+                } else {
+                    this.markCell(cell);
+                    console.log('Bien ahi, safaste.')
+                }
             }
         }
         return this.checkWin();
     }
 
+    moveMine(cell: Cell) {
+        let moved = false;
+        for (let x = 0; x < this.sizeX; x++) {
+            for (let y = 0; y < this.sizeY; y++) {
+                const currentCell = {x: x, y: y}
+                if (!this.findMine(currentCell)) {
+                    this.boardMines = this.boardMines.filter((mine) => !(mine.x === cell.x && mine.y === cell.y));
+                    this.boardMines.push(currentCell)
+                    moved = true;
+                    break;
+                }
+            }
+            if (moved) break;
+        }
+    }
+
+    markCell(cell: Cell) {
+        if (!this.isCellValid(cell)) {
+            return false;
+        }
+        const cant = this.cellArround(cell);
+        const cheked = this.findChecked(cell);
+        if (cant === 0 && !cheked) {
+            this.boardChecked.push(cell)
+            this.board[cell.x][cell.y] = ' ';
+            this.markCell({x: cell.x - 1, y: cell.y - 1})
+            this.markCell({x: cell.x, y: cell.y - 1})
+            this.markCell({x: cell.x + 1, y: cell.y - 1})
+            this.markCell({x: cell.x - 1, y: cell.y})
+            this.markCell({x: cell.x + 1, y: cell.y})
+            this.markCell({x: cell.x - 1, y: cell.y + 1})
+            this.markCell({x: cell.x, y: cell.y + 1})
+            this.markCell({x: cell.x + 1, y: cell.y + 1})
+        } else {
+            if (this.isCellValid(cell) && !cheked) {
+                this.boardChecked.push(cell)
+                this.board[cell.x][cell.y] = (cant === 0 ? ' ' : cant.toString());
+            }
+        }
+    }
+
+    printMap(show: boolean = false): void {
+        if (show) {
+            this.showMap();
+        }
+        process.stdin.write('     |');
+        for (let sizeX = 0; sizeX <= this.sizeX - 1; sizeX++) {
+            process.stdin.write(`${sizeX} |`)
+        }
+        process.stdin.write('\n');
+        process.stdin.write('\n');
+        for (let sizeY = 0; sizeY <= this.sizeY - 1; sizeY++) {
+            if (sizeY > 9) {
+                process.stdin.write(`|${sizeY}| `);
+            } else {
+                process.stdin.write(`|${sizeY}|  `);
+            }
+            process.stdin.write('|');
+            for (let sizeX = 0; sizeX <= this.sizeX - 1; sizeX++) {
+                process.stdin.write(this.board[sizeX][sizeY] + (sizeX > 9 ? "|" : "| "));
+            }
+            process.stdin.write('\n');
+        }
+    }
+
     private findMine(cell: Cell): boolean {
-        return this.boardMines.some((mine) => mine.x === cell.x && mine.y === cell.y)
+        return this.boardMines
+            .some((mine) => mine.x === cell.x && mine.y === cell.y)
     }
 
     private findChecked(cell: Cell): boolean {
@@ -81,86 +143,63 @@ export class Game {
     }
 
     private checkWin() {
-        this.boardFlags.every((flag) => this.findChecked(flag))
+        return this.boardChecked.length + this.boardMines.length === this.sizeX * this.sizeY
     }
 
     private isCellValid(cell) {
-        if (cell.x < 0 || cell.x > this.sizeX || cell.y < 0 || cell.y > this.sizeY || cell.x == null || cell.y == null) {
-            console.log('Coordenada invalida.')
+        if (cell.x < 0 || cell.x >= this.sizeX || cell.y < 0 || cell.y >= this.sizeY || cell.x == null || cell.y == null) {
             return false;
         }
         return true;
     }
 
-    printMap(finish: boolean = false): void {
-        process.stdin.write('     |');
-        for (let sizeX = 1; sizeX <= this.sizeX; sizeX++) {
-            process.stdin.write(`${sizeX}|`)
-        }
-
-        process.stdin.write('\n');
-        process.stdin.write('\n');
-        for (let sizeY = 1; sizeY <= this.sizeY; sizeY++) {
-            if (sizeY > 9) {
-                process.stdin.write(`|${sizeY}| `);
-            } else {
-                process.stdin.write(`|${sizeY}|  `);
-            }
-            process.stdin.write('|');
-            for (let sizeX = 1; sizeX <= this.sizeX; sizeX++) {
-                let icon = this.setIcon(sizeX, sizeY, finish)
-                process.stdin.write(icon + (sizeX > 9 ? "|" : " |"));
-                if (icon === ' ') {
-
-                }
-            }
-            process.stdin.write('\n');
-        }
-        console.log(this.board)
+    private generateBoard(): void {
+        this.board = Array(this.sizeX)
+            .fill([])
+            .map((value) => Array(this.sizeY)
+                .fill('#'));
     }
 
-    private setIcon(x: number, y: number, boom: boolean): string {
-        let icon = '#';
-        let data;
-        if (boom) {
-            data = this.boardMines;
-        } else {
-            data = this.boardChecked;
+    private allocateMines() {
+        for (let cantMines = 1; cantMines <= this.mines; cantMines++) {
+            const posX = Math.floor((Math.random() * this.sizeX));
+            const posY = Math.floor((Math.random() * this.sizeY));
+            this.findMine({x: posX, y: posY}) ? cantMines-- : this.boardMines.push({x: posX, y: posY});
         }
-        for (const cell of data) {
-            if (cell.x === x && cell.y === y) {
-                if (boom) {
-                    icon = '!';
+    }
+
+    private showMap() {
+        for(let x = 0; x < this.sizeX; x++){
+            for(let y = 0; y < this.sizeY; y++){
+                const cell = {x:x, y:y};
+                if (this.findMine(cell)) {
+                    this.board[x][y] = '!';
                 } else if (this.findFlag(cell)) {
-                    icon = 'F';
+                    this.board[x][y] = 'F';
                 } else {
-                    icon = this.quantityAroundOfCell(cell);
+                    const cant = this.cellArround(cell);
+                    this.board[x][y] = (cant > 0 ? cant.toString() : ' ');
                 }
             }
         }
-
-        return icon;
     }
 
-    quantityAroundOfCell(cell: Cell): string {
+    private cellArround(cell: Cell): number {
         let result: any = 0;
         for (const mine of this.boardMines) {
             if (
-                ((mine.x - 1) === cell.y && (mine.y) === cell.x) ||
-                ((mine.x + 1) === cell.y && (mine.y) === cell.x) ||
-                ((mine.x) === cell.y && (mine.y - 1) === cell.x) ||
-                ((mine.x) === cell.y && (mine.y + 1) === cell.x) ||
-                ((mine.x + 1) === cell.y && (mine.y + 1) === cell.x) ||
-                ((mine.x - 1) === cell.y && (mine.y + 1) === cell.x) ||
-                ((mine.x + 1) === cell.y && (mine.y - 1) === cell.x) ||
-                ((mine.x - 1) === cell.y && (mine.y - 1) === cell.x)
+                ((mine.x - 1) === cell.x && (mine.y) === cell.y) ||
+                ((mine.x + 1) === cell.x && (mine.y) === cell.y) ||
+                ((mine.x) === cell.x && (mine.y - 1) === cell.y) ||
+                ((mine.x) === cell.x && (mine.y + 1) === cell.y) ||
+                ((mine.x + 1) === cell.x && (mine.y + 1) === cell.y) ||
+                ((mine.x - 1) === cell.x && (mine.y + 1) === cell.y) ||
+                ((mine.x + 1) === cell.x && (mine.y - 1) === cell.y) ||
+                ((mine.x - 1) === cell.x && (mine.y - 1) === cell.y)
             ) {
                 result++;
             }
         }
-        if (result == 0) {
-            result = ' ';
-        }
-        return result.toString();
+        return result;
     }
 }
