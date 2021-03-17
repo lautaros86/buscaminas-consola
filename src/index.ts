@@ -48,16 +48,4 @@ async function startGame() {
 
 loadData();
 
-// function sarasa (){
-//     var minesArr = Array(10).fill(-1);
-//     var aux = Array(5 * 5 - 10).fill(0);
-//     aux = aux.concat(minesArr);
-//     aux = aux.sort(() => Math.random() - 0.5);
-//     console.log(aux)
-// var slice;
-// for (let i = 0; i < rows; i++) {
-//   slice = aux.slice(i * rows, i * rows + cols);
-//   board[i] = slice;
-// }
-// }
 
